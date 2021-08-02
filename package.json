@@ -1,0 +1,23 @@
+{
+  "name": "aws-bootstrap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node ./node_modules/pm2/bin/pm2 start ./server.js --name hello_aws --log ../log/app.log ",
+    "stop": "node ./node_modules/pm2/bin/pm2 stop hello_aws",
+    "build": "echo 'Building...'"
+  },
+  "keywords": [],
+  "author": "Arlan Uy",
+  "license": "ISC",
+  "dependencies": {
+    "pm2": "4.2.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.28.5",
+    "@typescript-eslint/parser": "^4.28.5",
+    "eslint": "^7.32.0",
+    "typescript": "^4.3.5"
+  }
+}
