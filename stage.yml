@@ -20,13 +20,11 @@ Resources:
       AliasTarget:
         HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
         DNSName: !GetAtt LoadBalancer.DNSName
-  LBEndpoint:
-    Description: The DNS name for the stage
-    Value: !Sub "http://${DNS}"
-    Export:
-      Name: LBEndpoint
   ScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
+    TargetGroupARNs:
+      - !Ref LoadBalancerTargetGroup
+      - !Ref HTTPSLoadBalancerTargetGroup
     UpdatePolicy: 
       AutoScalingRollingUpdate: 
         MinInstancesInService: "1"
@@ -66,6 +64,30 @@ Resources:
         - Key: Name
           Value: !Ref AWS::StackName
           PropagateAtLaunch: "true"
+  HTTPSLoadBalancerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      TargetType: instance
+      Port: 8443 
+      Protocol: HTTPS
+      VpcId: !Ref VPC
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTPS 
+      Tags:
+        - Key: Name
+          Value: !Ref AWS::StackName
+  ScalingGroup:
+    Description: The ScalingGroup for this stage
+    Value: !Ref ScalingGroup
+  StagingDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      DeploymentGroupName: staging
+      AutoScalingGroups:
+      - !GetAtt Staging.Outputs.ScalingGroup 
+      ApplicationName: !Ref DeploymentApplication
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      ServiceRoleArn: !GetAtt DeploymentRole.Arn
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -198,6 +220,17 @@ Resources:
       LoadBalancerArn: !Ref LoadBalancer
       Port: 80
       Protocol: HTTP
+  HTTPSLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref HTTPSLoadBalancerTargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Certificates:
+        - CertificateArn: !Ref Certificate 
+      Port: 443 
+      Protocol: HTTPS
   LoadBalancerTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -404,6 +437,9 @@ Resources:
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --region ${AWS::Region} --resource Instance
 
 Outputs:
+  HTTPSEndpoint:
+    Description: The DNS name for the stage
+    Value: !Sub "https://${DNS}"
   InstanceEndpoint1:
     Description: The DNS name for the created instance
     Value: !Sub "http://${Instance.PublicDnsName}:8080"
@@ -413,7 +449,22 @@ Outputs:
     Description: The DNS name for the staging LB
     Value: !GetAtt Staging.Outputs.LBEndpoint
     Export:
-      Name: StagingLBEndpoint 
+      Name: StagingLBEndpoint
+  StagingHTTPSLBEndpoint:
+    Description: The DNS name for the staging HTTPS LB
+    Value: !GetAtt Staging.Outputs.HTTPSEndpoint
+    Export:
+      Name: StagingHTTPSLBEndpoint
+  ProdLBEndpoint:
+    Description: The DNS name for the prod LB
+    Value: !GetAtt Prod.Outputs.LBEndpoint
+    Export:
+      Name: ProdLBEndpoint
+  ProdHTTPSLBEndpoint: 
+    Description: The DNS name for the prod HTTPS LB
+    Value: !GetAtt Prod.Outputs.HTTPSEndpoint
+    Export:
+      Name: ProdHTTPSLBEndpoint
   InstanceEndpoint2:
     Description: The DNS name for the created instance
     Value: !Sub "http://${Instance2.PublicDnsName}:8080"
@@ -422,15 +473,3 @@ Outputs:
   LBEndpoint:
     Description: The DNS name for the LB
     Value: !Sub "http://${LoadBalancer.DNSName}:80"
-  ScalingGroup:
-    Description: The ScalingGroup for this stage
-    Value: !Ref ScalingGroup
-  StagingDeploymentGroup:
-    Type: AWS::CodeDeploy::DeploymentGroup
-    Properties:
-      DeploymentGroupName: staging
-      AutoScalingGroups:
-      - !GetAtt Staging.Outputs.ScalingGroup 
-      ApplicationName: !Ref DeploymentApplication
-      DeploymentConfigName: CodeDeployDefault.AllAtOnce
-      ServiceRoleArn: !GetAtt DeploymentRole.Arn

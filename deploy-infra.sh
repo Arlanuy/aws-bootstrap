@@ -5,6 +5,9 @@ REGION=us-east-2
 CLI_PROFILE=uy_arlan
 
 EC2_INSTANCE_TYPE=t2.micro
+DOMAIN=the-good-parts.com
+CERT=`aws acm list-certificates --region $REGION --profile awsbootstrap --output text \
+        --query "CertificateSummaryList[?DomainName=='$DOMAIN'].CertificateArn | [0]"` 
 
 # Generate a personal access token with repo and admin:repo_hook
 #    permissions from https://github.com/settings/tokens
@@ -25,7 +28,8 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
     EC2InstanceType=$EC2_INSTANCE_TYPE \
-    Domain=$DOMAIN \ 
+    Domain=$DOMAIN \
+    Certificate=$CERT \ 
     GitHubOwner=$GH_OWNER \
     GitHubRepo=$GH_REPO \
     GitHubBranch=$GH_BRANCH \

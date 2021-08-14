@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
+  Certificate:
+    Type: String
+    Description: 'An existing ACM certificate ARN for subdomain.domain'
   EC2InstanceType:
     Type: String
   EC2AMI:
@@ -73,7 +76,7 @@ Resources:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      VpcId: !Ref VPC 
+      VpcId: !Ref VPC
       GroupDescription:
         !Sub 'Internal Security group for ${AWS::StackName}'
       SecurityGroupIngress:
@@ -82,8 +85,16 @@ Resources:
           ToPort: 8080
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp 
+          FromPort: 8443
+          ToPort: 8443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp 
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 22
@@ -175,15 +186,29 @@ Resources:
               ApplicationName: !Ref DeploymentApplication
               DeploymentGroupName: !Ref StagingDeploymentGroup
             RunOrder: 1
-  Prod:
+  Staging:
     Type: AWS::CloudFormation::Stack
-    DependsOn: Staging 
     Properties:
       TemplateURL: stage.yml
       TimeoutInMinutes: 30
       Parameters:
         EC2InstanceType: !Ref EC2InstanceType
         EC2AMI: !Ref EC2AMI
+        Domain: !Ref Domain
+        SubDomain: staging
+        Certificate: !Ref Certificate 
+
+  Prod:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stage.yml
+      TimeoutInMinutes: 30
+      Parameters:
+        EC2InstanceType: !Ref EC2InstanceType
+        EC2AMI: !Ref EC2AMI
+        Domain: !Ref Domain
+        SubDomain: prod
+        Certificate: !Ref Certificate 
   ProdLBEndpoint:
     Description: The DNS name for the prod LB
     Value: !GetAtt Prod.Outputs.LBEndpoint
@@ -472,6 +497,12 @@ Resources:
 
               # Create log directory
               mkdir -p /home/ec2-user/app/logs
+
+              # Create a self-signed TLS certificate to communicate with the load balancer
+              mkdir -p /home/ec2-user/app/keys
+              cd /home/ec2-user/app/keys
+              openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \ 
+                          -subj "/C=/ST=/L=/O=/CN=localhost" -keyout key.pem -out cert.pem
             EOF
 
             chown ec2-user:ec2-user /tmp/install_script.sh && chmod a+x /tmp/install_script.sh
