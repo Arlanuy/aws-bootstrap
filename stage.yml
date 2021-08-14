@@ -1,15 +1,28 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Parameters:
+  Domain:
+    Type: String
+  SubDomain:
+    Type: String
   EC2InstanceType:
     Type: String
   EC2AMI:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 Resources:
+  DNS:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Sub '${Domain}.'
+      Name: !Sub '${SubDomain}.${Domain}.'
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
+        DNSName: !GetAtt LoadBalancer.DNSName
   LBEndpoint:
-    Description: The DNS name for the LB
-    Value: !Sub "http://${LoadBalancer.DNSName}:80"
+    Description: The DNS name for the stage
+    Value: !Sub "http://${DNS}"
     Export:
       Name: LBEndpoint
   ScalingGroup:
@@ -247,6 +260,27 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref AWS::StackName
+  Staging:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stage.yml
+      TimeoutInMinutes: 30
+      Parameters:
+        EC2InstanceType: !Ref EC2InstanceType
+        EC2AMI: !Ref EC2AMI
+        Domain: !Ref Domain 
+        SubDomain: staging 
+
+  Prod:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: stage.yml
+      TimeoutInMinutes: 30
+      Parameters:
+        EC2InstanceType: !Ref EC2InstanceType
+        EC2AMI: !Ref EC2AMI
+        Domain: !Ref Domain
+      SubDomain: prod 
   InstanceLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Metadata:

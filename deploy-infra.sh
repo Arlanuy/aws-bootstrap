@@ -14,17 +14,18 @@ GH_REPO=$(cat ~/.github/aws-bootstrap-repo)
 GH_BRANCH=master
 CFN_BUCKET="$STACK_NAME-cfn-$AWS_ACCOUNT_ID"
 
+# Deploy the CloudFormation template
 echo -e "\n\n=========== Deploying main.yml ==========="
-
 aws cloudformation deploy \
-	--region $REGION \
+  --region $REGION \
   --profile $CLI_PROFILE \
   --stack-name $STACK_NAME \
-  --template-file main.yml \
+  --template-file ./cfn_output/main.yml \
   --no-fail-on-empty-changeset \
   --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides \ 
+  --parameter-overrides \
     EC2InstanceType=$EC2_INSTANCE_TYPE \
+    Domain=$DOMAIN \ 
     GitHubOwner=$GH_OWNER \
     GitHubRepo=$GH_REPO \
     GitHubBranch=$GH_BRANCH \
