@@ -1,7 +1,7 @@
 #!/bin/bash
 
 STACK_NAME=uy_arlan
-REGION=us-east-1
+REGION=us-east-2
 CLI_PROFILE=uy_arlan
 
 EC2_INSTANCE_TYPE=t2.micro
@@ -16,4 +16,4 @@ aws cloudformation deploy \
   --no-fail-on-empty-changeset \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \ 
-    EC2InstanceType=$EC2_INSTANCE_TYPE
+    CodePipelineBucket=$CODEPIPELINE_BUCKET
