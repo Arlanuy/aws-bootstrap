@@ -211,13 +211,13 @@ Resources:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      VpcId: !Ref VPC 
+      VpcId: !Ref VPC
       GroupDescription:
-        !Sub 'Internal Security group for ${AWS::StackName}'
-      SecurityGroupIngress:
+        !Sub 'Security group for ${AWS::StackName}'
+      SecurityGroupIngress: 
         - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
